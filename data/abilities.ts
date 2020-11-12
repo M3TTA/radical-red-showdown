@@ -4397,4 +4397,150 @@ export const Abilities: {[abilityid: string]: AbilityData} = {
 		rating: 5,
 		num: 269,
 	},
+	  Blademaster: {
+		onBasePowerPriority: 23,
+		onBasePower(basePower, attacker, defender, move) {
+			if (move.flags['sword']) {
+				this.debug('Blademaster boost');
+				return this.chainModify([0x1333, 0x1000]);
+			}
+		},
+
+		name: "Blademaster",
+		rating: 3,
+		num: 269,
+
+    Striker: {
+		onBasePowerPriority: 23,
+		onBasePower(basePower, attacker, defender, move) {
+			if (move.flags['kick']) {
+				this.debug('Striker boost');
+				return this.chainModify([0x1333, 0x1000]);
+			}
+		},
+
+		name: "Striker",
+		rating: 3,
+		num: 270,
+  sagepower: {
+		onStart(pokemon) {
+			pokemon.abilityData.choiceLock = "";
+		},
+		onBeforeMove(pokemon, target, move) {
+			if (move.isZOrMaxPowered || move.id === 'struggle') return;
+			if (pokemon.abilityData.choiceLock && pokemon.abilityData.choiceLock !== move.id) {
+				// Fails unless ability is being ignored (these events will not run), no PP lost.
+				this.addMove('move', pokemon, move.name);
+				this.attrLastMove('[still]');
+				this.debug("Disabled by Sage Power");
+				this.add('-fail', pokemon);
+				return false;
+			}
+		},
+		onModifyMove(move, pokemon) {
+			if (pokemon.abilityData.choiceLock || move.isZOrMaxPowered || move.id === 'struggle') return;
+			pokemon.abilityData.choiceLock = move.id;
+		},
+		onModifyAtkPriority: 1,
+		onModifyAtk(spa, pokemon) {
+			if (pokemon.volatiles['dynamax']) return;
+			// PLACEHOLDER
+			this.debug('Sage Power Spa Boost');
+			return this.chainModify(1.5);
+		},
+		onDisableMove(pokemon) {
+			if (!pokemon.abilityData.choiceLock) return;
+			if (pokemon.volatiles['dynamax']) return;
+			for (const moveSlot of pokemon.moveSlots) {
+				if (moveSlot.id !== pokemon.abilityData.choiceLock) {
+					pokemon.disableMove(moveSlot.id, false, this.effectData.sourceEffect);
+				}
+			}
+		},
+		onEnd(pokemon) {
+			pokemon.abilityData.choiceLock = "";
+		},
+		name: "Sage Power",
+		rating: 4.5,
+		num: 272,
+	},
+
+  ragingboxer: {
+		onPrepareHit(source, target, move) {
+			if(move.flags['punch']) {
+				move.multihit = 2;
+				move.multihitType = 'parentalbond';
+			}
+		},
+		onBasePowerPriority: 7,
+		onBasePower(basePower, pokemon, target, move) {
+			if (move.multihitType === 'parentalbond' && move.hit > 1) return this.chainModify(0.25);
+		},
+		onSourceModifySecondaries(secondaries, target, source, move) {
+			if (move.multihitType === 'parentalbond' && move.id === 'secretpower' && move.hit < 2) {
+				// hack to prevent accidentally suppressing King's Rock/Razor Fang
+				return secondaries.filter(effect => effect.volatileStatus === 'flinch');
+			}
+		},
+		name: "Raging Boxer",
+		rating: 4.5,
+		num: 273,
+	},
+
+	parasiticwaste: {
+
+		onAfterMoveSecondarySelfPriority: -1,
+				onAfterMoveSecondarySelf(pokemon, target, move) {
+					if (move.category !== 'Status') {
+						this.heal(pokemon.lastDamage / 2, pokemon);
+				}
+			},
+			name: "Parasitic Waste",
+			rating: 4.5,
+			num: 274,
+		},
+
+		badcompany: {
+		onBoost(boost, target, source, effect) {
+			if (target && source === source) return;
+			let showMsg = false;
+			let i: BoostName;
+			for (i in boost) {
+				if (boost[i]! < 0) {
+					delete boost[i];
+					showMsg = true;
+				}
+			}
+		},
+		name: "Bad Company",
+		rating: 2,
+		num: 275,
+	},
+
+	mountaineer: {
+			onTryHitPriority: 1,
+			onTryHit(target, source, move) {
+				if (target !== source && move.type === 'Rock') {
+					if (!this.boost({atk: 0})) {
+						this.add('-immune', target, '[from] ability: Mountaineer');
+					}
+					return null;
+				}
+			},
+			name: "Mountaineer",
+			rating: 3,
+			num: 276,
+		},
+
+		primalarmor: {
+		onSourceModifyDamage(damage, source, target, move) {
+			if (target.getMoveHitData(move).typeMod > 0) {
+				this.debug('Primal Armor neutralize');
+				return this.chainModify(0.5);
+			}
+		},
+		name: "Primal Armor",
+		rating: 3,
+		num: 277,
+	},
 };
